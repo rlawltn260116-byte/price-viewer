@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow"><meta name="referrer" content="no-referrer">
+<title>조아 vs 경쟁사 가격 비교</title>
+<style>
+body{margin:0;background:#F3F5F8;font-family:'맑은 고딕','Malgun Gothic',sans-serif;color:#222}
+.wrap{max-width:900px;margin:24px auto;background:#fff;border:1px solid #E1E8F0;border-radius:8px;padding:24px 28px}
+h1{font-size:18px;margin:0 0 4px;color:#1F3864}
+.sub{color:#666;font-size:12px;margin-bottom:16px}
+.hint{font-size:12px;color:#666;margin-top:8px;line-height:1.6}
+.btn{display:inline-block;margin-top:8px;padding:8px 14px;border:1px solid #1F3864;border-radius:6px;background:#fff;color:#1F3864;font-weight:600;cursor:pointer;font-family:inherit}
+.ov{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(15,23,42,.45);z-index:10;align-items:center;justify-content:center;padding:16px}
+.ov.on{display:flex}
+.md{background:#fff;border-radius:8px;width:100%;max-width:1120px;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+.md-h{display:flex;justify-content:space-between;align-items:flex-start;padding:16px 20px 12px;border-bottom:1px solid #E5E7EB}
+.md-h h2{margin:0;font-size:16px;color:#1F3864}
+.lg{font-size:11px;color:#777;margin-top:4px}
+.x{cursor:pointer;font-size:26px;line-height:1;color:#999;border:0;background:none;padding:0 4px}
+.x:hover{color:#333}
+.md-b{overflow:auto;padding:0 20px 16px}
+table.dt{border-collapse:separate;border-spacing:0;width:100%;font-size:12.5px;margin-top:12px}
+table.dt th{position:sticky;top:0;background:#F3F4F6;padding:8px 10px;border:1px solid #E5E7EB;border-left:0;text-align:center;white-space:nowrap;cursor:pointer;user-select:none;font-weight:600}
+table.dt th:first-child{border-left:1px solid #E5E7EB}
+table.dt th:hover{background:#E5E7EB}
+table.dt th .s{color:#B0B7C3;margin-left:4px;font-size:10px}
+table.dt th.on .s{color:#1F3864}
+table.dt td{padding:7px 10px;border-right:1px solid #E5E7EB;border-bottom:1px solid #E5E7EB;white-space:nowrap}
+table.dt td:first-child{border-left:1px solid #E5E7EB}
+table.dt td.t{text-align:left}
+table.dt td.nm{white-space:normal;min-width:160px}
+table.dt td.r{text-align:right}
+table.dt tbody tr:nth-child(even) td{background:#FAFBFC}
+.pos{color:#C00000;font-weight:600}.neg{color:#1F4E9E;font-weight:600}.zero{color:#888}
+</style></head><body>
+<div class="wrap">
+<h1 id="ttl">조아 vs 경쟁사 가격 비교</h1>
+<div class="sub" id="msg">불러오는 중…</div>
+<button class="btn" id="again" style="display:none" onclick="show()">목록 다시 열기</button>
+</div>
+<div class="ov" id="ov" onclick="if(event.target===this)closeList()">
+<div class="md">
+<div class="md-h"><div><h2 id="mt"></h2><div class="lg">사업소 매익률 = (급여가 − 금액) ÷ 급여가 · 차액 = 조아 금액 − 경쟁사 금액 · 매익률 차이 = 경쟁사 매익률 − 조아 매익률 (빨강: 조아가 비쌈 · 파랑: 조아가 저렴)</div></div><button class="x" onclick="closeList()" aria-label="닫기">×</button></div>
+<div class="md-b"><table class="dt" id="dt"><thead><tr>
+<th onclick="sortBy(0)">품목군<span class="s"></span></th><th onclick="sortBy(1)">상품명<span class="s"></span></th><th onclick="sortBy(2)">급여가<span class="s"></span></th><th onclick="sortBy(3)">조아 금액<span class="s"></span></th><th onclick="sortBy(4)">조아 사업소 매익률<span class="s"></span></th><th onclick="sortBy(5)">경쟁사 금액<span class="s"></span></th><th onclick="sortBy(6)">경쟁사 사업소 매익률<span class="s"></span></th><th onclick="sortBy(7)">차액<span class="s"></span></th><th onclick="sortBy(8)">매익률 차이<span class="s"></span></th>
+</tr></thead><tbody id="tb"></tbody></table></div>
+</div></div>
+<script>
+var cur = [], sortCol = -1, sortAsc = true;
+function e(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+function f(n) { return n == null ? '-' : Number(n).toLocaleString('ko-KR'); }
+function p0(n) { return n == null ? '-' : Math.round(n) + '%'; }
+function openRows(title, rows) {
+  cur = rows.map(function (r) {
+    var sp = r[3], cp = r[4], list = r[2];
+    // [품목군, 상품명, 급여가, 조아 금액, 조아 사업소 매익률, 경쟁사 금액, 경쟁사 사업소 매익률, 차액, 매익률 차이]
+    return { v: [r[0], r[1], list, sp, list ? (list - sp) / list * 100 : null, cp, list ? (list - cp) / list * 100 : null, sp - cp, list ? (sp - cp) / list * 100 : null], code: r[5], cn: r[6] };
+  });
+  sortCol = -1; sortAsc = true;
+  document.getElementById('mt').textContent = title + ' (' + cur.length + '건)';
+  render();
+  document.getElementById('ov').className = 'ov on';
+  document.querySelector('.md-b').scrollTop = 0;
+}
+function closeList() { document.getElementById('ov').className = 'ov'; }
+function sortBy(i) {
+  if (sortCol === i) sortAsc = !sortAsc; else { sortCol = i; sortAsc = true; }
+  cur.sort(function (a, b) {
+    var x = a.v[i], y = b.v[i];
+    if (x == null && y == null) return 0;
+    if (x == null) return 1;
+    if (y == null) return -1;
+    var r = (typeof x === 'number' && typeof y === 'number') ? x - y : String(x).localeCompare(String(y), 'ko');
+    return sortAsc ? r : -r;
+  });
+  render();
+}
+function render() {
+  var ths = document.querySelectorAll('#dt th');
+  for (var i = 0; i < ths.length; i++) {
+    ths[i].className = i === sortCol ? 'on' : '';
+    ths[i].querySelector('.s').textContent = i === sortCol ? (sortAsc ? '▲' : '▼') : '⇅';
+  }
+  var h = '';
+  cur.forEach(function (o) {
+    var v = o.v, dc = v[7] > 0 ? 'pos' : (v[7] < 0 ? 'neg' : 'zero');
+    var tip = o.code ? ' title="' + e('급여코드 ' + o.code + ' · 경쟁사 표기: ' + o.cn) + '"' : '';
+    h += '<tr><td class="t">' + e(v[0]) + '</td><td class="t nm"' + tip + '>' + e(v[1]) + '</td>'
+      + '<td class="r">' + f(v[2]) + '</td><td class="r">' + f(v[3]) + '</td><td class="r">' + p0(v[4]) + '</td>'
+      + '<td class="r">' + f(v[5]) + '</td><td class="r">' + p0(v[6]) + '</td>'
+      + '<td class="r ' + dc + '">' + f(v[7]) + '</td>'
+      + '<td class="r ' + dc + '">' + (v[8] == null ? '-' : v[8].toFixed(1) + '%') + '</td></tr>';
+  });
+  if (!cur.length) h = '<tr><td colspan="9" style="text-align:center;color:#888;padding:20px">해당 상품이 없습니다</td></tr>';
+  document.getElementById('tb').innerHTML = h;
+}
+document.addEventListener('keydown', function (ev) { if (ev.key === 'Escape' || ev.key === 'Esc') closeList(); });
+var P = null;
+var WD = ['일', '월', '화', '수', '목', '금', '토'];
+function lbl(d) { var p = String(d).split('-').map(Number); var w = new Date(Date.UTC(p[0], p[1] - 1, p[2])).getUTCDay(); return p[1] + '/' + p[2] + '(' + WD[w] + ')'; }
+function show() { if (P) openRows(P.c + ' — ' + P.f, P.r); }
+async function load() {
+  var h = location.hash.replace(/^#/, '');
+  var msg = document.getElementById('msg');
+  if (!h) { msg.textContent = '메일의 숫자를 눌러서 열어 주세요.'; return; }
+  try {
+    if (typeof DecompressionStream === 'undefined') throw new Error('old');
+    var b = h.replace(/-/g, '+').replace(/_/g, '/'); while (b.length % 4) b += '=';
+    var bin = atob(b), u = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
+    var txt = await new Response(new Blob([u]).stream().pipeThrough(new DecompressionStream('gzip'))).text();
+    P = JSON.parse(txt);
+    document.getElementById('ttl').textContent = '조아 vs 경쟁사 가격 비교 — ' + lbl(P.d);
+    document.title = P.c + ' ' + P.f + ' — ' + lbl(P.d);
+    msg.textContent = P.c + ' · ' + P.f + ' ' + P.r.length + '건 (같은 급여코드 기준) · 헤더를 클릭하면 정렬됩니다';
+    document.getElementById('again').style.display = 'inline-block';
+    show();
+  } catch (err) {
+    msg.textContent = err && err.message === 'old' ? '브라우저가 오래되어 열 수 없습니다. 크롬·엣지 등 최신 브라우저로 열어 주세요. (메일 첨부 HTML로도 볼 수 있습니다)' : '링크가 잘렸거나 손상되었습니다. 메일 첨부 HTML로 확인해 주세요.';
+  }
+}
+window.addEventListener('hashchange', load);
+load();
+</script>
+</body></html>
