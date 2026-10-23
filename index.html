@@ -193,7 +193,7 @@ table.dt tbody tr:nth-child(even) td{background:#FAFBFC}
       h += '<tr><td>' + e(c.n) + '</td><td>' + num('p-' + ci + '-all', c.r.length, '#1F3864') + '</td><td>' + num('p-' + ci + '-self', s.length, '#1F4E9E') + av(s)
         + '</td><td>' + num('p-' + ci + '-comp', k.length, '#C00000') + av(k) + '</td><td>' + num('p-' + ci + '-same', m.length, '#555') + '</td></tr>';
     });
-    return h + '</table><div class="note">평균 = 해당 품목들의 가격 차이율 평균 (조아 가격 대비)</div>';
+    return h + '</table><div class="note">평균 = 해당 품목들의 차이 % 평균 (조아 가격 대비)</div>';
   }
   function shipSec() {
     if (!DATA.ship || !DATA.ship.length) return '';
