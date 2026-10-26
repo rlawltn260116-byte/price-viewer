@@ -18,7 +18,7 @@ a.num{font-weight:700;text-decoration:underline;cursor:pointer}
 .btn{display:inline-block;margin-top:8px;padding:8px 14px;border:1px solid #1F3864;border-radius:6px;background:#fff;color:#1F3864;font-weight:600;cursor:pointer;font-family:inherit}
 .ov{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(15,23,42,.45);z-index:10;align-items:center;justify-content:center;padding:16px}
 .ov.on{display:flex}
-.md{background:#fff;border-radius:8px;width:100%;max-width:1120px;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+.md{background:#fff;border-radius:8px;width:100%;max-width:1280px;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 10px 30px rgba(0,0,0,.25)}
 .md-h{display:flex;justify-content:space-between;align-items:flex-start;padding:16px 20px 12px;border-bottom:1px solid #E5E7EB}
 .md-h h2{margin:0;font-size:16px;color:#1F3864}
 .lg{font-size:11px;color:#777;margin-top:4px;line-height:1.5}
@@ -26,16 +26,17 @@ a.num{font-weight:700;text-decoration:underline;cursor:pointer}
 .x:hover{color:#333}
 .md-b{overflow:auto;padding:0 20px 16px}
 table.dt{border-collapse:separate;border-spacing:0;width:100%;font-size:12.5px;margin-top:12px}
-table.dt th{position:sticky;top:0;background:#F3F4F6;padding:8px 10px;border:1px solid #E5E7EB;border-left:0;text-align:center;white-space:nowrap;cursor:pointer;user-select:none;font-weight:600}
+table.dt th{position:sticky;top:0;background:#F3F4F6;padding:8px var(--px,10px);border:1px solid #E5E7EB;border-left:0;text-align:center;white-space:nowrap;cursor:pointer;user-select:none;font-weight:600}
 table.dt th:first-child{border-left:1px solid #E5E7EB}
 table.dt th:hover{background:#E5E7EB}
-table.dt th .s{color:#B0B7C3;margin-left:4px;font-size:10px}
+table.dt th .s{color:#B0B7C3;margin-left:3px;font-size:10px}
 table.dt th.on .s{color:#1F3864}
-table.dt td{padding:7px 10px;border-right:1px solid #E5E7EB;border-bottom:1px solid #E5E7EB;white-space:nowrap}
+table.dt td{padding:7px var(--px,10px);border-right:1px solid #E5E7EB;border-bottom:1px solid #E5E7EB;white-space:nowrap}
 table.dt td:first-child{border-left:1px solid #E5E7EB}
 table.dt td.t{text-align:left}
 table.dt td.c{text-align:center}
-table.dt td.nm{white-space:normal;min-width:160px}
+table.dt td.nm{white-space:normal;min-width:120px}
+table.dt.tight td.t{white-space:normal}table.dt.tight td.nm{min-width:80px}
 table.dt td.r{text-align:right}
 table.dt tbody tr:nth-child(even) td{background:#FAFBFC}
 .pos{color:#C00000;font-weight:600}.neg{color:#1F4E9E;font-weight:600}.zero{color:#888}
@@ -92,6 +93,7 @@ table.dt tbody tr:nth-child(even) td{background:#FAFBFC}
     render();
     $('ov').className = 'ov on';
     $('mb').scrollTop = 0;
+    fit();
   }
   function closeList() { $('ov').className = 'ov'; }
   function sortBy(i) {
@@ -105,6 +107,19 @@ table.dt tbody tr:nth-child(even) td{background:#FAFBFC}
       return sortAsc ? r : -r;
     });
     render();
+  }
+  // 좌우 스크롤이 생기지 않게: 표가 창보다 넓으면 글자 크기·칸 여백을 한 단계씩 줄임 (헤더는 한 줄 유지)
+  //   [글자 px, 칸 좌우 여백 px, 1 = 좁은 화면용(품목군·경쟁사 칸도 줄바꿈 허용)]
+  var FIT = [[12.5, 10], [12, 8], [11.5, 6], [11, 5], [10.5, 4], [11, 4, 1], [10.5, 3, 1], [10, 3, 1]];
+  function fit() {
+    var mb = $('mb'), t = mb.querySelector('table.dt');
+    if (!t || $('ov').className.indexOf('on') < 0) return;
+    for (var i = 0; i < FIT.length; i++) {
+      t.style.fontSize = FIT[i][0] + 'px';
+      t.style.setProperty('--px', FIT[i][1] + 'px');
+      t.className = FIT[i][2] ? 'dt tight' : 'dt';
+      if (mb.scrollWidth <= mb.clientWidth) break;
+    }
   }
   function render() {
     var ths = document.querySelectorAll('#dh th');
@@ -126,6 +141,7 @@ table.dt tbody tr:nth-child(even) td{background:#FAFBFC}
     });
     if (!cur.length) h = '<tr><td colspan="' + cols.length + '" style="text-align:center;color:#888;padding:20px">해당 상품이 없습니다</td></tr>';
     $('tb').innerHTML = h;
+    fit();
   }
 
   /* ---- 데이터 → 목록 ---- */
@@ -310,6 +326,7 @@ table.dt tbody tr:nth-child(even) td{background:#FAFBFC}
   });
   document.addEventListener('keydown', function (ev) { if (ev.key === 'Escape' || ev.key === 'Esc') closeList(); });
   window.addEventListener('hashchange', load);
+  window.addEventListener('resize', fit);
   load();
 })({"repo":"rlawltn260116-byte/price-viewer"}, null);
 </script>
