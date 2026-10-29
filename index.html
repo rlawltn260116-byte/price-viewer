@@ -37,6 +37,7 @@ table.dt td.t{text-align:left}
 table.dt td.c{text-align:center}
 table.dt td.nm{white-space:normal;min-width:120px}
 table.dt.tight td.t{white-space:normal}table.dt.tight td.nm{min-width:80px}
+table.dt.ct tbody tr td.cat,table.dt.ct tbody tr td.sub{background:#F7F9FC;vertical-align:top}table.dt.ct td.cat{font-weight:600}table.dt.ct td.sub{font-weight:700;color:#1F3864}table.dt.ct tbody tr.tot td{background:#EEF2F8;font-weight:700}table.dt.ct td.dim{color:#888}table.dt.ct th{cursor:default}
 table.dt td.r{text-align:right}
 table.dt tbody tr:nth-child(even) td{background:#FAFBFC}
 .pos{color:#C00000;font-weight:600}.neg{color:#1F4E9E;font-weight:600}.zero{color:#888}
@@ -45,6 +46,7 @@ table.dt tbody tr:nth-child(even) td{background:#FAFBFC}
 <div class="wrap">
 <h1 id="ttl">경쟁사 가격 모니터링</h1>
 <div class="sub" id="msg">불러오는 중…</div>
+<div id="sec-o"></div>
 <div id="sec-p"></div>
 <div id="sec-g"></div>
 <div id="sec-s"></div>
@@ -75,6 +77,14 @@ table.dt tbody tr:nth-child(even) td{background:#FAFBFC}
     { h: '안내 문구', a: 't', w: 1 },
     { h: '구분', a: 'c', hl: function (v) { return v === '신규 발생' ? 'pos' : v === '해소' ? 'neg' : ''; } }
   ];
+  var UF = { up: '판매가 인상', down: '판매가 인하' };
+  var NF = { add: '신규 상품', del: '삭제된 상품' };
+  var ULEG = '변동액 = 금일 − 전일 판매가 · 변동률 = 변동액 ÷ 전일 판매가 (빨강: 인상 · 파랑: 인하)';
+  var NLEG = { add: '오늘 처음 보이는 상품 (어제 목록에는 없음)', del: '어제는 있었는데 오늘 목록에 없는 상품 (판매가는 어제 기준)' };
+  var QLEG = '할인율 = (판매가 − 수량할인가) ÷ 판매가 · 할인 조건은 사이트 표기 그대로';
+  var UCOLS = [{ h: '품목군', a: 't' }, { h: '상품명', a: 't', w: 1, tip: 1 }, { h: '전일 판매가', a: 'r', k: 'n' }, { h: '금일 판매가', a: 'r', k: 'n' }, { h: '변동액', a: 'r', k: 'n', sg: 1 }, { h: '변동률', a: 'r', k: 'p1', sg: 1 }];
+  var NCOLS = [{ h: '품목군', a: 't' }, { h: '상품명', a: 't', w: 1, tip: 1 }, { h: '카테고리', a: 't' }, { h: '판매가', a: 'r', k: 'n' }];
+  var QCOLS = [{ h: '품목군', a: 't' }, { h: '상품명', a: 't', w: 1, tip: 1 }, { h: '판매가', a: 'r', k: 'n' }, { h: '수량할인가', a: 'r', k: 'n' }, { h: '할인율', a: 'r', k: 'p1' }, { h: '할인 조건', a: 't', w: 1 }];
   var DATA = null, DID = '', ONE = null;
   function $(id) { return document.getElementById(id); }
   function e(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
@@ -90,6 +100,8 @@ table.dt tbody tr:nth-child(even) td{background:#FAFBFC}
     var h = '<tr>';
     cs.forEach(function (c, i) { h += '<th data-i="' + i + '">' + e(c.h) + '<span class="s"></span></th>'; });
     $('dh').innerHTML = h + '</tr>';
+    $('dh').parentNode.classList.remove('ct');
+    $('ov').querySelector('.md').style.maxWidth = '';
     render();
     $('ov').className = 'ov on';
     $('mb').scrollTop = 0;
@@ -117,7 +129,7 @@ table.dt tbody tr:nth-child(even) td{background:#FAFBFC}
     for (var i = 0; i < FIT.length; i++) {
       t.style.fontSize = FIT[i][0] + 'px';
       t.style.setProperty('--px', FIT[i][1] + 'px');
-      t.className = FIT[i][2] ? 'dt tight' : 'dt';
+      t.classList.toggle('tight', !!FIT[i][2]);
       if (mb.scrollWidth <= mb.clientWidth) break;
     }
   }
@@ -176,6 +188,35 @@ table.dt tbody tr:nth-child(even) td{background:#FAFBFC}
     DATA.comp.forEach(function (c) { c.r.forEach(function (r) { if (r[7] === cat) out.push({ cn: c.n, r: r }); }); });
     return out;
   }
+  function gLast(g) { return g === '(급여코드 없음)' || /^기타\(/.test(g) ? 1 : 0; }
+  function gLabel(g) { return g === '(급여코드 없음)' ? '급여코드 없음' : g.replace(/^기타\(코드 (.+)\)$/, '기타 (코드 $1…)'); }
+  function openTree(s) { // 상품수 → 대 카테고리 › 품목군 개수
+    var c = s.cats, total = 0, h = '';
+    var cats = Object.keys(c).map(function (a) {
+      var gs = Object.keys(c[a]).sort(function (x, y) { return gLast(x) - gLast(y) || c[a][y] - c[a][x]; });
+      var t = 0; gs.forEach(function (g) { t += c[a][g]; });
+      return { a: a, gs: gs, t: t };
+    });
+    cats.sort(function (x, y) { return y.t - x.t; });
+    cats.forEach(function (x) {
+      total += x.t;
+      x.gs.forEach(function (g, j) {
+        h += '<tr>' + (j === 0 ? '<td class="t cat" rowspan="' + x.gs.length + '">' + e(x.a) + '</td><td class="r sub" rowspan="' + x.gs.length + '">' + x.t + '</td>' : '')
+          + '<td class="t' + (gLast(g) ? ' dim' : '') + '">' + e(gLabel(g)) + '</td><td class="r">' + c[x.a][g] + '</td></tr>';
+      });
+    });
+    h += '<tr class="tot"><td class="t" colspan="2">합계</td><td></td><td class="r">' + total + '</td></tr>';
+    cols = []; cur = []; sortCol = -1;
+    $('mt').textContent = s.n + ' — 상품수 ' + total + ' (대 카테고리 › 품목군)';
+    $('lg').textContent = '대 카테고리 = 각 사이트의 상품 분류 · 품목군 = 급여코드 앞자리 기준 · 많은 순 (급여코드가 없는 상품은 "급여코드 없음")';
+    $('dh').innerHTML = '<tr><th>대 카테고리</th><th>소계</th><th>품목군</th><th>상품수</th></tr>';
+    $('dh').parentNode.classList.add('ct');
+    $('ov').querySelector('.md').style.maxWidth = '720px';
+    $('tb').innerHTML = h;
+    $('ov').className = 'ov on';
+    $('mb').scrollTop = 0;
+    fit();
+  }
   function openView(vw) {
     var p = String(vw).split('-'), t = p[0], i = +p[1], fl = p[2];
     if (!DATA) return;
@@ -188,6 +229,12 @@ table.dt tbody tr:nth-child(even) td{background:#FAFBFC}
     } else if (t === 's' && DATA.ship[i] && SF[fl]) {
       var s = DATA.ship[i];
       openTable(s.n + ' — ' + SF[fl], SLEG, SCOLS, shipRows(s.r.filter(SFL[fl])));
+    } else if (DATA.sites && DATA.sites[i]) {
+      var o = DATA.sites[i];
+      if (t === 'c') openTree(o);
+      else if (t === 'u' && UF[fl]) openTable(o.n + ' — ' + UF[fl], ULEG, UCOLS, o[fl].map(function (r) { var d = r[3] - r[2]; return { v: [r[0], r[1], r[2], r[3], d, r[2] ? d / r[2] * 100 : null], sg: d, tip: r[4] ? '급여코드 ' + r[4] : '' }; }));
+      else if (t === 'n' && NF[fl]) openTable(o.n + ' — ' + NF[fl], NLEG[fl], NCOLS, o[fl].map(function (r) { return { v: [r[0], r[1], r[2], r[3]], tip: r[4] ? '급여코드 ' + r[4] : '' }; }));
+      else if (t === 'q') openTable(o.n + ' — 수량할인 상품', QLEG, QCOLS, o.qty.map(function (r) { return { v: [r[0], r[1], r[2], r[3], r[2] ? (r[2] - r[3]) / r[2] * 100 : null, r[4]], tip: r[5] ? '급여코드 ' + r[5] : '' }; }));
     }
   }
 
@@ -199,6 +246,22 @@ table.dt tbody tr:nth-child(even) td{background:#FAFBFC}
     if (!rows.length) return null;
     var s = 0; rows.forEach(function (r) { s += Math.abs(r[4] - r[3]) / r[3] * 100; });
     return Math.round(s / rows.length * 10) / 10;
+  }
+  function siteSec() {
+    if (!DATA.sites || !DATA.sites.length) return '';
+    var h = '<h3>사이트별 현황</h3><table class="sm"><tr><th>사이트</th><th>상품수</th><th>인상</th><th>인하</th><th>정책</th><th>수량할인</th><th>신규</th><th>삭제</th><th>출고이슈</th><th>무기한</th></tr>';
+    DATA.sites.forEach(function (s, si) {
+      var tot = 0, a, g;
+      for (a in s.cats) for (g in s.cats[a]) tot += s.cats[a][g];
+      var shi = -1;
+      (DATA.ship || []).forEach(function (x, j) { if (x.n === s.n) shi = j; });
+      var sc = function (fl) { return shi < 0 ? 0 : DATA.ship[shi].r.filter(SFL[fl]).length; };
+      h += '<tr' + (s.self ? ' style="background:#E2EFDA"' : '') + '><td style="text-align:left">' + e(s.n) + (s.self ? ' <b>(자사)</b>' : '') + '</td><td>' + num('c-' + si + '-all', tot, '#1F3864')
+        + '</td><td>' + num('u-' + si + '-up', s.up.length, '#C00000') + '</td><td>' + num('u-' + si + '-down', s.down.length, '#1F4E9E') + '</td><td>' + e(s.dir)
+        + '</td><td>' + num('q-' + si + '-all', s.qty.length, '#1F3864') + '</td><td>' + num('n-' + si + '-add', s.add.length, '#1F3864') + '</td><td>' + num('n-' + si + '-del', s.del.length, '#555')
+        + '</td><td>' + num('s-' + shi + '-cur', sc('cur'), '#1F3864') + '</td><td>' + num('s-' + shi + '-indef', sc('indef'), '#C00000') + '</td></tr>';
+    });
+    return h + '</table>';
   }
   function priceSec() {
     if (!DATA.comp.length) return '';
@@ -238,6 +301,7 @@ table.dt tbody tr:nth-child(even) td{background:#FAFBFC}
     document.title = '경쟁사 모니터링 — ' + lbl(DATA.d);
     var names = DATA.comp.map(function (c) { return c.n; }).join('·');
     $('msg').textContent = '조아비즈몰 기준' + (names ? ' ' + names + ' 비교' : '') + ' · 밑줄 친 숫자를 누르면 해당 상품 목록이 열립니다';
+    $('sec-o').innerHTML = siteSec();
     $('sec-p').innerHTML = priceSec();
     $('sec-s').innerHTML = shipSec();
     $('sec-g').innerHTML = catSec();
@@ -272,7 +336,7 @@ table.dt tbody tr:nth-child(even) td{background:#FAFBFC}
   }
   function fromV2(o) { // 예전 메일 링크(가격 경쟁력만 담긴 형식)
     return {
-      d: o.d, cats: [], ship: [],
+      d: o.d, cats: [], ship: [], sites: [],
       comp: o.c.map(function (c) {
         var r = [];
         for (var i = 0; i < c.r.length; i += 2) { var j = c.r[i] * 4, sp = o.p[j + 3]; r.push([o.g[o.p[j]], o.p[j + 1], o.p[j + 2], sp, sp + c.r[i + 1], '', '', null]); }
@@ -286,11 +350,11 @@ table.dt tbody tr:nth-child(even) td{background:#FAFBFC}
     try {
       if (EMBED) {
         if (!DATA) { DATA = EMBED; page(); }
-        if (/^[psg]-\d+-[a-z]+$/.test(h)) openView(h);
+        if (/^[psgcunq]-\d+-[a-z]+$/.test(h)) openView(h);
         return;
       }
       if (!h) { msg.textContent = '메일의 숫자를 눌러서 열어 주세요.'; return; }
-      var m3 = h.match(/^([0-9a-f]{16})\.([A-Za-z0-9_-]{43})(?:\.([psg]-\d+-[a-z]+))?$/);
+      var m3 = h.match(/^([0-9a-f]{16})\.([A-Za-z0-9_-]{43})(?:\.([psgcunq]-\d+-[a-z]+))?$/);
       if (m3) {
         if (DID !== m3[1]) { msg.textContent = '불러오는 중…'; DATA = await open3(m3[1], m3[2]); DID = m3[1]; page(); }
         if (m3[3]) openView(m3[3]);
@@ -320,7 +384,7 @@ table.dt tbody tr:nth-child(even) td{background:#FAFBFC}
     var a = t.closest && t.closest('a[data-v]');
     if (a) { ev.preventDefault(); openView(a.getAttribute('data-v')); return; }
     var th = t.closest && t.closest('#dh th');
-    if (th) { sortBy(+th.getAttribute('data-i')); return; }
+    if (th && th.hasAttribute('data-i')) { sortBy(+th.getAttribute('data-i')); return; }
     if (t.id === 'x' || t.id === 'ov') closeList();
     if (t.id === 'again') showOne();
   });
